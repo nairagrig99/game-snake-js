@@ -1,17 +1,13 @@
 class Snake {
     snake = [];
     snakeHTMLElement = [];
-    previousPositions = []
 
     constructor(snake) {
         this.snake = snake;
-        this.previousPositions = this.snake.map(segment => ({...segment}));
 
         this.initSquare();
         this.generateSnake();
         this.showSnake();
-
-        this.snakeHTMLElement = document.querySelectorAll('.square');
     }
 
     initSquare() {
@@ -19,6 +15,7 @@ class Snake {
     }
 
     generateSnake() {
+
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
 
@@ -27,11 +24,11 @@ class Snake {
         group.setAttribute("id", "snake");
 
         this.snake.forEach((segment, index) => {
-            const rect = document.createElementNS(svgNS, "rect");
-
             const stone = document.createElement('p');
-            const game_square = document.querySelector('.game-square');
+            const game_square = this.initSquare();
             stone.classList.add('stone');
+
+            const rect = document.createElementNS(svgNS, "rect");
 
             rect.setAttribute("width", "18");
             rect.setAttribute("height", "18");
@@ -86,7 +83,6 @@ class MoveSnake extends Snake {
                             direction = 'up'
                             this.moveSnake(0, -this.score.y);
                         } else {
-                            console.log("second")
                             this.moveSnake(0, this.score.y);
                         }
                         break;
@@ -121,18 +117,17 @@ class MoveSnake extends Snake {
 
     moveSnake(deltaX, deltaY) {
         const time = 200
-        this.moveInterval = setInterval(() => {
 
+        this.moveInterval = setInterval(() => {
+            const previousPositions = this.snake.map(segment => ({...segment}));
             this.snake[0].x += deltaX;
             this.snake[0].y += deltaY;
-
+            //
             for (let i = 1; i < this.snake.length; i++) {
-                this.snake[i].x = this.previousPositions[i - 1].x;
-                this.snake[i].y = this.previousPositions[i - 1].y;
+                this.snake[i].x = previousPositions[i - 1].x;
+                this.snake[i].y = previousPositions[i - 1].y;
             }
-
             this.updateSnakeVisuals();
-
         }, time)
     }
 
@@ -144,20 +139,70 @@ class MoveSnake extends Snake {
                 // stop game when snake pass the box borders
                 if (this.snake[0].x > box.width || this.snake[0].y > box.height || this.snake[0].x < 0 || this.snake[0].y < 0) {
                     clearInterval(this.moveInterval);
-
                 }
+
+                this.eatStone()
             }
+
             element.style.transform = `translate(${this.snake[index].x}px, ${this.snake[index].y}px)`;
         });
     }
 }
 
 class EatStone extends MoveSnake {
+    stonePosition = {}
 
     constructor(snake) {
         super(snake)
+        this.drawStoneInGameBoard()
     }
 
+    drawStoneInGameBoard() {
+        const createStone = document.createElement('p');
+        createStone.innerHTML = '';
+        createStone.classList.add('stone');
+        this.generateRandomPositionOfStone(createStone);
+        this.initSquare().appendChild(createStone);
+        const stoneList = document.querySelectorAll('.stone');
+        if (stoneList.length > 1) {
+            stoneList[0].remove()
+        }
+    }
+
+    generateRandomPositionOfStone(stone) {
+        const positionY = Math.floor(Math.random() * 500);
+        const positionX = Math.floor(Math.random() * 500);
+
+        stone.style.top = `${positionY}px`;
+        stone.style.left = `${positionX}px`;
+        this.stonePosition = {
+            x: positionX,
+            y: positionY
+        }
+    }
+
+    eatStone() {
+        const targetX = this.stonePosition.x
+        const targetY = this.stonePosition.y
+        const findNearPositionX = Math.abs(targetX - this.snake[0].x) <= 10;
+        const findNearPositionY = Math.abs(targetY - this.snake[0].y) <= 10;
+
+        if (findNearPositionX && findNearPositionY) {
+            this.addNewStone();
+        }
+    }
+
+    addNewStone() {
+        const lastPosition = this.snake[this.snake.length - 1];
+        const newStone = {x: lastPosition.x - this.score.x, y: lastPosition.y + this.score.y}
+        this.snake.push(newStone);
+        const newSvg = this.snakeHTMLElement[this.snakeHTMLElement.length - 1];
+        const newElement = newSvg.cloneNode(true);
+        newElement.style.transform = `translate(${newStone.x}px, ${newStone.y}px)`;
+        document.querySelector('#snake').appendChild(newElement);
+        this.snakeHTMLElement = document.querySelectorAll('.square');
+        this.drawStoneInGameBoard()
+    }
 }
 
 new EatStone([

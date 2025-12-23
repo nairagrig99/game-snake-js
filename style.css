@@ -3,4 +3,14 @@
     width: 460px;
     height: 560px;
     margin: 0 auto;
+    position: relative;
+}
+
+.stone {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: red;
+    border-radius: 50px;
+    margin: 0 auto;
 }
