@@ -1,10 +1,13 @@
 class Snake {
-    snake = [];
+    snake = [
+        {x: 240, y: 200},
+        {x: 220, y: 200},
+        {x: 200, y: 200},
+        {x: 180, y: 200}
+    ];
     snakeHTMLElement = [];
 
-    constructor(snake) {
-        this.snake = snake;
-
+    constructor() {
         this.initSquare();
         this.generateSnake();
         this.showSnake();
@@ -60,8 +63,8 @@ class MoveSnake extends Snake {
     };
     moveInterval = null;
 
-    constructor(snake) {
-        super(snake);
+    constructor() {
+        super();
         this.changeSnakePosition();
     }
 
@@ -73,41 +76,43 @@ class MoveSnake extends Snake {
         let direction = null;
 
         document.addEventListener('keyup', (e) => {
-
-            if (e.key !== previousEvent) {
+            if (e.key !== previousEvent && (e.key === 'ArrowUp'
+                || e.key === 'ArrowDown'
+                || e.key === 'ArrowLeft'
+                || e.key === 'ArrowRight') && this.popupHtml.classList.contains('hidden')) {
                 clearInterval(this.moveInterval);
                 previousEvent = e.key;
                 switch (e.key) {
                     case 'ArrowUp':
                         if (direction !== 'down') {
                             direction = 'up'
-                            this.moveSnake(0, -this.score.y);
+                            this.moveSnake(0, -this.score.y, e);
                         } else {
-                            this.moveSnake(0, this.score.y);
+                            this.moveSnake(0, this.score.y, e);
                         }
                         break;
                     case 'ArrowDown':
                         if (direction !== 'up') {
                             direction = 'down'
-                            this.moveSnake(0, this.score.y);
+                            this.moveSnake(0, this.score.y, e);
                         } else {
-                            this.moveSnake(0, -this.score.y);
+                            this.moveSnake(0, -this.score.y, e);
                         }
                         break;
                     case 'ArrowLeft':
                         if (direction !== 'right') {
                             direction = 'left'
-                            this.moveSnake(-this.score.x, 0);
+                            this.moveSnake(-this.score.x, 0, e);
                         } else {
-                            this.moveSnake(this.score.x, 0)
+                            this.moveSnake(this.score.x, 0, e)
                         }
                         break;
                     case 'ArrowRight':
                         if (direction !== 'left') {
                             direction = 'right'
-                            this.moveSnake(this.score.x, 0);
+                            this.moveSnake(this.score.x, 0, e);
                         } else {
-                            this.moveSnake(-this.score.x, 0);
+                            this.moveSnake(-this.score.x, 0, e);
                         }
                         break;
                 }
@@ -115,32 +120,46 @@ class MoveSnake extends Snake {
         });
     }
 
-    moveSnake(deltaX, deltaY) {
+    moveSnake(deltaX, deltaY, e) {
         const time = 200
 
         this.moveInterval = setInterval(() => {
             const previousPositions = this.snake.map(segment => ({...segment}));
             this.snake[0].x += deltaX;
             this.snake[0].y += deltaY;
-            //
+
             for (let i = 1; i < this.snake.length; i++) {
                 this.snake[i].x = previousPositions[i - 1].x;
                 this.snake[i].y = previousPositions[i - 1].y;
             }
-            this.updateSnakeVisuals();
+            this.updateSnakeVisuals(e);
         }, time)
     }
 
-    updateSnakeVisuals() {
+    updateSnakeVisuals(e) {
         this.snakeHTMLElement.forEach((element, index) => {
             if (index === 0) {
                 const box = document.querySelector('svg').getBoundingClientRect();
+                const elementRect = element.getBoundingClientRect();
+                const x = Math.floor(elementRect.x)
+                const y = Math.floor(elementRect.y)
 
                 // stop game when snake pass the box borders
-                if (this.snake[0].x > box.width || this.snake[0].y > box.height || this.snake[0].x < 0 || this.snake[0].y < 0) {
-                    clearInterval(this.moveInterval);
+                if (this.snake[0].x > box.width
+                    || this.snake[0].y > box.height
+                    || this.snake[0].x < 0
+                    || this.snake[0].y < 0
+                    || (this.snake[0].x === x || this.snake[0].y === y)) {
+                    this.gameOverPopup(e)
                 }
 
+                this.snake.forEach((stone, index) => {
+                    if (index > 0) {
+                        if (this.snake[0].x === stone.x && this.snake[0].y === stone.y) {
+                            this.gameOverPopup(e)
+                        }
+                    }
+                })
                 this.eatStone()
             }
 
@@ -152,8 +171,8 @@ class MoveSnake extends Snake {
 class EatStone extends MoveSnake {
     stonePosition = {}
 
-    constructor(snake) {
-        super(snake)
+    constructor() {
+        super()
         this.drawStoneInGameBoard()
     }
 
@@ -170,11 +189,12 @@ class EatStone extends MoveSnake {
     }
 
     generateRandomPositionOfStone(stone) {
-        const positionY = Math.floor(Math.random() * 500);
-        const positionX = Math.floor(Math.random() * 500);
+        const positionY = Math.floor(Math.random() * 450);
+        const positionX = Math.floor(Math.random() * 450);
 
         stone.style.top = `${positionY}px`;
         stone.style.left = `${positionX}px`;
+
         this.stonePosition = {
             x: positionX,
             y: positionY
@@ -195,19 +215,57 @@ class EatStone extends MoveSnake {
     addNewStone() {
         const lastPosition = this.snake[this.snake.length - 1];
         const newStone = {x: lastPosition.x - this.score.x, y: lastPosition.y + this.score.y}
+
         this.snake.push(newStone);
+
         const newSvg = this.snakeHTMLElement[this.snakeHTMLElement.length - 1];
         const newElement = newSvg.cloneNode(true);
+
         newElement.style.transform = `translate(${newStone.x}px, ${newStone.y}px)`;
+
         document.querySelector('#snake').appendChild(newElement);
         this.snakeHTMLElement = document.querySelectorAll('.square');
         this.drawStoneInGameBoard()
     }
 }
 
-new EatStone([
-    {x: 240, y: 200},
-    {x: 220, y: 200},
-    {x: 200, y: 200},
-    {x: 180, y: 200}
-]);
+class GameOver extends EatStone {
+    popupHtml = null;
+
+    constructor() {
+        super();
+        this.popupHtml = document.querySelector('.popup')
+        this.startNewGame()
+    }
+
+    gameOverPopup(e) {
+        const gameOverTxt = document.querySelector('.game-over');
+        const score = document.querySelector('.score');
+        score.innerText = `score: ${this.snake.length - 4}`;
+        gameOverTxt.appendChild(score)
+        this.popupHtml.classList.remove('hidden');
+
+        clearInterval(this.moveInterval);
+        this.snakeHTMLElement.forEach((el) => el.remove())
+        this.snake = [
+            {x: 240, y: 200},
+            {x: 220, y: 200},
+            {x: 200, y: 200},
+            {x: 180, y: 200}
+        ]
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    startNewGame() {
+        document.querySelector('.play-again').addEventListener('click', () => {
+            this.popupHtml.classList.add('hidden');
+            this.showSnake();
+            this.drawStoneInGameBoard();
+            this.changeSnakePosition();
+        })
+    }
+
+}
+
+new GameOver();
